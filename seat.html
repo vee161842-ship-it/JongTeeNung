@@ -1,0 +1,379 @@
+```react
+import React, { useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  deleteDoc,
+  onSnapshot, 
+  query 
+} from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  onAuthStateChanged,
+  signInWithCustomToken 
+} from 'firebase/auth';
+import { 
+  Armchair, 
+  CheckCircle2, 
+  LogOut, 
+  ShieldAlert, 
+  Trash2, 
+  Sparkles, 
+  BrainCircuit, 
+  Wand2, 
+  Loader2,
+  X,
+  User,
+  ShieldCheck,
+  ChevronLeft
+} from 'lucide-react';
+
+// --- Firebase Configuration ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'classroom-seating-v4';
+const apiKey = ""; 
+
+const STUDENT_LIST = {
+  "1": { id: "16572", name: "ด.ช.กรวัฒน์ ผดาวัน" },
+  "2": { id: "16573", name: "ด.ช.ชนพัฒน์ บุญดี" },
+  "3": { id: "16574", name: "ด.ช.ณัฐกฤต แซ่เตีย" },
+  "4": { id: "16575", name: "ด.ช.ณัฐนันท์ แซ่โอ่ว" },
+  "5": { id: "16576", name: "ด.ช.ณัฐสิทธิ์ ชะรารัมย์" },
+  "6": { id: "16577", name: "ด.ช.ดนย์ศิรา ฟักทองพรรณ" },
+  "7": { id: "16578", name: "ด.ช.ต้นแรม ต้นสิงห์" },
+  "8": { id: "16579", name: "ด.ช.เตชิษฐ์ กาเจริญ" },
+  "9": { id: "16580", name: "ด.ช.ธนภูมิ นาคบุตร" },
+  "10": { id: "16581", name: "ด.ช.ธีรดนย์ นามวิจิตร" },
+  "11": { id: "16582", name: "ด.ช.นพดล ทองจันทร์" },
+  "12": { id: "16583", name: "ด.ช.ปัณณทัต อินทปัตย์" },
+  "13": { id: "16584", name: "ด.ช.ปัณณวิชญ์ พลวลัยรัตน์" },
+  "14": { id: "16585", name: "ด.ช.พัธรกฤษฎิ์ สว่างแก้ว" },
+  "15": { id: "16586", name: "ด.ช.พัทรศักดิ์ โพธะกัน" },
+  "16": { id: "16587", name: "ด.ช.พิรุฬห์กร ทองดี" },
+  "17": { id: "16588", name: "ด.ช.พีระพล คำพันชนะ" },
+  "18": { id: "16589", name: "ด.ช.ภูพัฒน์ แสนกุล" },
+  "19": { id: "16590", name: "ด.ช.สุรเชษฐ์ จอมโคตร" },
+  "20": { id: "16591", name: "ด.ช.เอกวิศว์ สุขลิ้ม" },
+  "21": { id: "16592", name: "ด.ญ.กรมาณี ทองลือ" },
+  "22": { id: "16593", name: "ด.ญ.ครองขวัญ สร้อยสูงเนิน" },
+  "23": { id: "16594", name: "ด.ญ.จิระประไพ ฉัตรทัน" },
+  "24": { id: "16595", name: "ด.ญ.ญาดาจันทมาศ ทองรักษ์" },
+  "25": { id: "16596", name: "ด.ญ.ณพิชญา หนูปลอด" },
+  "26": { id: "16597", name: "ด.ญ.ธนพร เกิดพุ่ม" },
+  "27": { id: "16598", name: "ด.ญ.ธนัญญา โพธิ์มี" },
+  "28": { id: "16599", name: "ด.ญ.ธัญญาภิทย์ กุยยาวัฒนานนท์" },
+  "29": { id: "16600", name: "ด.ญ.ธัญลักษณ์ เหงสกุล" },
+  "30": { id: "16601", name: "ด.ญ.ธันยภรณ์ ยิ่งผล" },
+  "31": { id: "16602", name: "ด.ญ.ธีรนาฏ สิทธิมงคล" },
+  "32": { id: "16603", name: "ด.ญ.นพกาญจน์ ไตรรวรรัตน์" },
+  "33": { id: "16604", name: "ด.ญ.นิชาภัทร ไชยพร" },
+  "34": { id: "16605", name: "ด.ญ.ปัญณวีร์ ชัยมาลา" },
+  "35": { id: "16606", name: "ด.ญ.พาขวัญ อนันตวงษ์" },
+  "36": { id: "16607", name: "ด.ญ.ภคพร ประเสริฐไทย" },
+  "37": { id: "16608", name: "ด.ญ.วิชญา ศรีหริ่ง" },
+  "38": { id: "16609", name: "ด.ญ.วิภาดา ภู่เอี่ยม" },
+  "39": { id: "16610", name: "ด.ญ.วิลาสินี รอดภัย" },
+  "40": { id: "16611", name: "ด.ญ.ศิรินภา ศรีวิเศษ" },
+  "3205": { id: "ADMIN", name: "อาจารย์ / ผู้ดูแลระบบ" }
+};
+
+const ROWS = 4;
+const COLS = 5;
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [loginRole, setLoginRole] = useState(null); // 'student' or 'admin'
+  const [inputNo, setInputNo] = useState('');
+  const [currentUserData, setCurrentUserData] = useState(null);
+  const [showConfirmLogin, setShowConfirmLogin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [seats, setSeats] = useState({});
+  const [selectedSeat, setSelectedSeat] = useState(null);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const seatsRef = collection(db, 'artifacts', appId, 'public', 'data', 'seats');
+    return onSnapshot(query(seatsRef), (snapshot) => {
+      const data = {};
+      snapshot.forEach(d => data[d.id] = d.data());
+      setSeats(data);
+    });
+  }, [user]);
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    if (loginRole === 'admin') {
+      if (inputNo === '3205') {
+        setCurrentUserData(STUDENT_LIST["3205"]);
+        setIsAdminMode(true);
+        setIsLoggedIn(true);
+      } else {
+        alert("รหัสผู้ดูแลระบบไม่ถูกต้อง");
+      }
+      return;
+    }
+
+    const student = STUDENT_LIST[inputNo];
+    if (student && inputNo !== '3205') {
+      setCurrentUserData({ no: inputNo, ...student });
+      setShowConfirmLogin(true);
+    } else {
+      alert("ไม่พบเลขที่นักเรียนนี้");
+    }
+  };
+
+  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-blue-500">Loading...</div>;
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+        {!loginRole ? (
+          <div className="w-full max-w-md space-y-4 animate-in fade-in zoom-in duration-300">
+            <div className="text-center mb-8">
+              <Armchair className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+              <h1 className="text-3xl font-black text-white">Classroom Seating</h1>
+              <p className="text-gray-500 text-sm mt-2">กรุณาเลือกประเภทการเข้าใช้งาน</p>
+            </div>
+            
+            <button 
+              onClick={() => setLoginRole('student')}
+              className="w-full bg-[#111] border border-gray-800 p-6 rounded-3xl flex items-center gap-6 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group"
+            >
+              <div className="w-14 h-14 bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                <User size={32} />
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-bold text-white">นักเรียน (Student)</h3>
+                <p className="text-gray-500 text-sm">จองที่นั่งด้วยเลขที่ของคุณ</p>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => setLoginRole('admin')}
+              className="w-full bg-[#111] border border-gray-800 p-6 rounded-3xl flex items-center gap-6 hover:border-red-500/50 hover:bg-red-500/5 transition-all group"
+            >
+              <div className="w-14 h-14 bg-red-600/20 rounded-2xl flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                <ShieldCheck size={32} />
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-bold text-white">ผู้ดูแลระบบ (Admin)</h3>
+                <p className="text-gray-500 text-sm">จัดการผังที่นั่งในห้องเรียน</p>
+              </div>
+            </button>
+          </div>
+        ) : !showConfirmLogin ? (
+          <div className="bg-[#111] p-8 rounded-3xl w-full max-w-sm border border-gray-800 shadow-2xl animate-in slide-in-from-bottom-4">
+            <button onClick={() => setLoginRole(null)} className="text-gray-500 hover:text-white flex items-center gap-1 mb-6 text-sm transition-colors">
+              <ChevronLeft size={16} /> กลับไปหน้าเลือก
+            </button>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {loginRole === 'admin' ? 'Admin Login' : 'Student Login'}
+            </h2>
+            <p className="text-gray-500 text-sm mb-8">
+              {loginRole === 'admin' ? 'กรุณากรอกรหัสผ่านผู้ดูแลระบบ' : 'กรุณากรอกเลขที่ของคุณ (1-40)'}
+            </p>
+            <form onSubmit={handleLoginSubmit}>
+              <input 
+                type={loginRole === 'admin' ? "password" : "number"}
+                required
+                autoFocus
+                className={`w-full bg-black border border-gray-800 rounded-2xl p-4 text-center text-3xl font-black text-white focus:ring-2 transition-all mb-6 ${loginRole === 'admin' ? 'focus:ring-red-600' : 'focus:ring-blue-600'}`}
+                placeholder={loginRole === 'admin' ? "••••" : "00"}
+                value={inputNo}
+                onChange={e => setInputNo(e.target.value)}
+              />
+              <button className={`w-full text-white font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-95 ${loginRole === 'admin' ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'}`}>
+                ยืนยันเข้าสู่ระบบ
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="bg-[#111] p-8 rounded-3xl w-full max-w-sm border border-blue-900/50 shadow-2xl animate-in zoom-in-95">
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+              <ShieldAlert className="text-blue-500" /> ตรวจสอบชื่อนักเรียน
+            </h2>
+            <div className="space-y-4 mb-8">
+              <div className="bg-black/50 p-4 rounded-2xl border border-gray-800">
+                <p className="text-xs text-gray-500 uppercase mb-1">เลขที่ {currentUserData.no}</p>
+                <p className="text-xl font-bold text-blue-400">{currentUserData.name}</p>
+              </div>
+              <div className="bg-black/50 p-4 rounded-2xl border border-gray-800">
+                <p className="text-xs text-gray-500 uppercase mb-1">รหัสนักเรียน</p>
+                <p className="text-lg font-bold text-white">{currentUserData.id}</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowConfirmLogin(false)} className="flex-1 py-4 text-gray-500 font-bold hover:text-white transition-colors">ไม่ใช่ฉัน</button>
+              <button onClick={() => setIsLoggedIn(true)} className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95">ถูกต้อง</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- Main Seating Page (Same as before but with minor UI cleanups) ---
+  return (
+    <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans">
+      <div className="max-w-[1200px] mx-auto">
+        <header className="flex justify-between items-center mb-6 bg-[#111] p-4 rounded-2xl border border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isAdminMode ? 'bg-red-600' : 'bg-blue-600'}`}>
+              {currentUserData.no || 'AD'}
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{isAdminMode ? 'ADMIN MODE' : 'STUDENT'}</p>
+              <p className={`font-bold ${isAdminMode ? 'text-red-400' : 'text-blue-400'}`}>{currentUserData.name}</p>
+            </div>
+          </div>
+          <button onClick={() => window.location.reload()} className="p-2 hover:bg-red-500/10 rounded-xl text-gray-600 hover:text-red-500 transition-all">
+             <LogOut />
+          </button>
+        </header>
+
+        {isAdminMode && (
+          <div className="mb-6 bg-red-600/10 border border-red-500/30 p-4 rounded-2xl flex items-center gap-3 text-red-500 text-sm font-bold">
+            <ShieldAlert size={18} /> โหมดผู้ดูแลระบบ: คลิกที่ที่นั่งเพื่อลบการจองของผู้อื่น
+          </div>
+        )}
+
+        <div className="relative bg-[#080808] border-2 border-gray-900 rounded-[3rem] p-6 md:p-12 min-h-[700px] overflow-x-auto shadow-inner mb-8">
+           {/* Sketch Decorations */}
+           <div className="flex justify-between items-start mb-20 min-w-[700px]">
+             <div className="w-16 h-20 border-2 border-red-900/50 bg-red-950/10 rounded-lg flex items-center justify-center text-red-800 font-bold text-[10px]">บอร์ด</div>
+             <div className="flex-1 max-w-[500px] mx-8 h-12 border-b-2 border-slate-800 flex items-center justify-center">
+                <span className="text-slate-600 font-bold tracking-[0.8em] text-xs md:text-sm uppercase">Gradan</span>
+             </div>
+             <div className="w-16 h-20 border-2 border-red-900/50 bg-red-950/10 rounded-lg flex items-center justify-center text-red-800 font-bold text-[10px]">บอร์ด</div>
+             <div className="absolute top-24 right-12 w-32 h-20 border-2 border-green-900/40 bg-green-950/10 rounded-2xl flex items-center justify-center text-green-800 font-bold text-xs">โต๊ะครู</div>
+           </div>
+
+           {/* Grid Layout */}
+           <div className="grid grid-rows-4 gap-12 md:gap-16 mt-28 min-w-[750px]">
+             {Array.from({ length: ROWS }).map((_, r) => (
+               <div key={r} className="flex justify-between items-center gap-4">
+                 {Array.from({ length: COLS }).map((_, c) => (
+                   <div key={c} className="flex-1 max-w-[160px] flex border-2 border-blue-950/40 bg-[#111]/50 rounded-2xl overflow-hidden h-16 md:h-24 relative shadow-lg group hover:border-blue-700 transition-all">
+                     <Seat r={r} c={c} side="L" seats={seats} currentNo={currentUserData.no} isAdmin={isAdminMode} onClick={() => handleSeatClick(r, c, 'L', seats, isAdminMode, setSelectedSeat, appId, db)} />
+                     <div className="w-px bg-blue-950/50 h-full"></div>
+                     <Seat r={r} c={c} side="R" seats={seats} currentNo={currentUserData.no} isAdmin={isAdminMode} onClick={() => handleSeatClick(r, c, 'R', seats, isAdminMode, setSelectedSeat, appId, db)} />
+                   </div>
+                 ))}
+               </div>
+             ))}
+           </div>
+        </div>
+
+        <footer className="flex flex-wrap gap-6 justify-center items-center text-[10px] font-bold tracking-widest text-gray-600 uppercase pb-10">
+          <div className="flex items-center gap-2"><div className="w-3 h-3 border border-blue-950 rounded-full"></div> ว่าง</div>
+          <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-600 rounded-full"></div> จองแล้ว</div>
+          <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-600 rounded-full"></div> ที่นั่งของคุณ</div>
+        </footer>
+      </div>
+
+      {selectedSeat && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 z-50">
+          <div className="bg-[#111] border border-blue-900/30 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95">
+            <h3 className="text-xl font-bold mb-8 text-center">ยืนยันเลือกที่นั่ง?</h3>
+            <div className="bg-black/40 p-4 rounded-2xl space-y-3 mb-10 border border-gray-800">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">ตำแหน่ง</span>
+                <span className="font-bold text-blue-400">แถว {selectedSeat.row + 1} | กลุ่ม {selectedSeat.col + 1} ({selectedSeat.side})</span>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => setSelectedSeat(null)} className="flex-1 py-4 text-gray-500 font-bold hover:text-white transition-colors">ยกเลิก</button>
+              <button 
+                onClick={() => confirmBooking(selectedSeat, user, currentUserData, appId, db, setSelectedSeat)} 
+                className="flex-[2] py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-transform"
+              >
+                จองที่นั่ง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Helper Components & Functions ---
+function Seat({ r, c, side, seats, currentNo, isAdmin, onClick }) {
+  const key = `${r}-${c}-${side}`;
+  const data = seats[key];
+  const isBooked = !!data;
+  const isMine = data?.no === currentNo;
+
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 flex flex-col items-center justify-center transition-all relative overflow-hidden
+        ${isBooked ? (isMine ? 'bg-blue-600 text-white' : 'bg-emerald-600/90 text-white') : 'hover:bg-blue-900/20 text-gray-800'}`}
+    >
+      <Armchair className={`w-5 h-5 md:w-8 md:h-8 ${isBooked ? 'opacity-100' : 'opacity-10'}`} />
+      {isBooked ? (
+        <span className="text-[10px] font-black mt-1 uppercase tracking-tighter">
+          {isMine ? "ME" : `NO.${data.no}`}
+        </span>
+      ) : (
+        <span className="text-[8px] opacity-0 group-hover:opacity-40 transition-opacity absolute bottom-1">{side}</span>
+      )}
+      {isAdmin && isBooked && (
+        <div className="absolute top-1 right-1 p-1 bg-red-600 rounded-full">
+          <Trash2 size={10} className="text-white" />
+        </div>
+      )}
+    </button>
+  );
+}
+
+function handleSeatClick(row, col, side, seats, isAdminMode, setSelectedSeat, appId, db) {
+  const seatKey = `${row}-${col}-${side}`;
+  const seatData = seats[seatKey];
+
+  if (isAdminMode && seatData) {
+    if (window.confirm(`ต้องการยกเลิกการจองของเลขที่ ${seatData.no} หรือไม่?`)) {
+      deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'seats', seatKey));
+    }
+    return;
+  }
+  if (seatData) return;
+  setSelectedSeat({ row, col, side });
+}
+
+async function confirmBooking(selectedSeat, user, currentUserData, appId, db, setSelectedSeat) {
+  const seatKey = `${selectedSeat.row}-${selectedSeat.col}-${selectedSeat.side}`;
+  try {
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'seats', seatKey), {
+      no: currentUserData.no,
+      name: currentUserData.name,
+      bookedBy: user.uid,
+      row: selectedSeat.row + 1,
+      col: selectedSeat.col + 1,
+      side: selectedSeat.side,
+      timestamp: Date.now()
+    });
+    setSelectedSeat(null);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
+```
